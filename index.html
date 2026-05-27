@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom & Petal Ultimate — Sistem ERP Toko Bunga</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <p>Sinkronisasi Sistem ERP...</p>
+        </div>
+    </div>
+
+    <div class="login-container" id="loginPage">
+        <div class="login-card">
+            <div class="logo-area">
+                <div class="logo-icon"><i class="fa-solid fa-layer-group"></i></div>
+                <h2>Bloom &amp; Petal</h2>
+                <p class="subtitle">Sistem Manajemen &amp; ERP Terpadu</p>
+            </div>
+            <div class="form-group">
+                <label for="loginUsername"><i class="fa-solid fa-user-tie"></i> Hak Akses Pengguna</label>
+                <input type="text" id="loginUsername" placeholder="admin atau kasir" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword"><i class="fa-solid fa-lock"></i> Kunci Keamanan</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="off">
+            </div>
+            <button class="btn btn-primary btn-block" id="btnLogin">Masuk Sistem <i class="fa-solid fa-shield-check icon-left"></i></button>
+            <p class="login-error" id="loginError"></p>
+            <div class="login-hint">
+                <p><span class="badge badge-good">Admin</span> user: <strong>admin</strong> | pass: <strong>admin123</strong></p>
+                <p><span class="badge badge-ok">Kasir</span> user: <strong>kasir</strong> | pass: <strong>kasir123</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container" id="mainContainer">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="s-icon"><i class="fa-solid fa-seedling text-emerald"></i></div>
+                <div>
+                    <div class="s-title">Bloom &amp; Petal</div>
+                    <div class="s-sub" id="sidebarRole">Sistem ERP</div>
+                </div>
+            </div>
+            <ul class="sidebar-nav" id="sidebarNav"></ul>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fa-solid fa-shield-user text-blue"></i>
+                    <span id="sidebarUserLabel">Operator</span>
+                </div>
+                <button class="logout-btn" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            
+            <section class="page-section" id="pageDashboard">
+                <div class="page-header">
+                    <div>
+                        <h3>Pusat Kendali Analitik</h3>
+                        <p class="section-desc">Pemantauan metrik bisnis, margin, dan logistik terpusat.</p>
+                    </div>
+                    <div class="live-clock" id="liveClock">00:00:00</div>
+                </div>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon text-blue bg-light-blue"><i class="fa-solid fa-chart-line-up"></i></div>
+                        <div class="kpi-data"><span class="kpi-title">Omzet Kotor (Gross)</span><h4 id="kpiRevenue">Rp0</h4></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon text-emerald bg-light-emerald"><i class="fa-solid fa-sack-dollar"></i></div>
+                        <div class="kpi-data"><span class="kpi-title">Estimasi Profit</span><h4 id="kpiNetProfit">Rp0</h4></div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon text-gold bg-light-gold"><i class="fa-solid fa-users"></i></div>
+                        <div class="kpi-data"><span class="kpi-title">Pelanggan Aktif</span><h4 id="kpiCRMCount">0 Anggota</h4></div>
+                    </div>
+                    <div class="kpi-card" id="kpiStockAlertCard">
+                        <div class="kpi-icon text-red bg-light-red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <div class="kpi-data"><span class="kpi-title">Peringatan Stok</span><h4 id="kpiStockCount">0 Kritis</h4></div>
+                    </div>
+                </div>
+                <div class="grid-two-columns">
+                    <div class="card">
+                        <div class="card-header border-none"><i class="fa-solid fa-wave-square text-blue icon-margin"></i>Tren Penjualan Harian</div>
+                        <div class="chart-area"><canvas id="lineChartRevenue"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header border-none"><i class="fa-solid fa-chart-bar text-emerald icon-margin"></i>Produk Terlaris</div>
+                        <div class="chart-area"><canvas id="barChartTopProducts"></canvas></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" id="pageInventory">
+                <div class="page-header">
+                    <div>
+                        <h3>Gudang Logistik</h3>
+                        <p class="section-desc">Pengawasan inventori dan Manajemen HPP.</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddFlower"><i class="fa-solid fa-circle-plus"></i> Tambah Bunga</button>
+                </div>
+                <div class="card table-card">
+                    <div class="card-header">
+                        <div>Total Varietas: <strong id="totalFlowers" class="text-blue">0</strong></div>
+                        <div class="search-box">
+                            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                            <input type="text" class="search-input" id="searchInventory" placeholder="Cari varietas...">
+                        </div>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Nama <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="cost">Harga Modal <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="price">Harga Jual <i class="fa-solid fa-sort"></i></th>
+                                    <th data-sort="stock">Stok <i class="fa-solid fa-sort"></i></th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTableBody"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination-container" id="inventoryPagination" style="margin-top: 15px; margin-bottom: 20px;"></div>
+                    
+                </div>
+            </section>
+
+            <section class="page-section" id="pageCashier">
+                <div class="page-header">
+                    <div>
+                        <h3>Terminal POS Kasir</h3>
+                        <p class="section-desc">Pemrosesan transaksi retail dan kasir.</p>
+                    </div>
+                    <div class="pos-action-buttons" style="display:flex; gap:10px;">
+                        <button class="btn btn-outline btn-sm" id="btnHoldCart"><i class="fa-solid fa-hand text-gold"></i> Tahan (Hold)</button>
+                        <button class="btn btn-outline btn-sm" id="btnRecallCart"><i class="fa-solid fa-box-archive text-blue"></i> Antrean (<span id="holdCount" style="font-weight:bold;">0</span>)</button>
+                    </div>
+                </div>
+                <div class="pos-layout">
+                    <div class="pos-products">
+                        <div class="search-box mb-15" style="width:100%;">
+                            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                            <input type="text" class="search-input" id="searchProduct" placeholder="Cari barang di etalase...">
+                        </div>
+                        
+                        <div class="product-grid" id="productGrid"></div>
+                    </div>
+
+                    <div class="pos-cart">
+                        <div class="pos-cart-header">
+                            <span><i class="fa-solid fa-cart-shopping text-blue"></i> Keranjang</span>
+                            <button class="btn btn-sm btn-outline text-red" id="btnClearCart">Kosongkan</button>
+                        </div>
+                        <div class="crm-assign-box">
+                            <label><i class="fa-solid fa-user-tag text-muted"></i> Pelanggan CRM:</label>
+                            <select id="cartCustomerSelect"><option value="">-- Non-Member --</option></select>
+                        </div>
+                        <div class="pos-cart-items" id="cartItems"></div>
+                        <div class="pos-cart-footer">
+                            <div class="summary-row"><span>Subtotal</span><span id="cartSubtotal">Rp0</span></div>
+                            <div class="summary-row discount-row">
+                                <span>Diskon (%)</span>
+                                <input type="number" id="discountPercent" value="0" min="0" max="100">
+                            </div>
+                            <div class="summary-row"><span>PPN (<span id="taxRateDisplay">11</span>%)</span><span id="cartTax">Rp0</span></div>
+                            <div class="summary-row total"><span>Total</span><span id="cartTotal">Rp0</span></div>
+                            <button class="btn btn-success btn-block btn-lg" id="btnPay" disabled>Bayar <i class="fa-solid fa-cash-register icon-left"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" id="pageCRM">
+                <div class="page-header">
+                    <div>
+                        <h3>Manajemen Pelanggan (CRM)</h3>
+                        <p class="section-desc">Monitor loyalitas dan poin pelanggan.</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddCustomer"><i class="fa-solid fa-user-plus"></i> Tambah Anggota</button>
+                </div>
+                <div class="card table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>Nama Pelanggan</th><th>Telepon</th><th>Poin Reward</th><th>Tier</th><th>Aksi</th></tr></thead>
+                            <tbody id="crmTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" id="pageSuppliers">
+                <div class="page-header">
+                    <div>
+                        <h3>Rantai Pasok (Supplier)</h3>
+                        <p class="section-desc">Manajemen daftar vendor logistik utama.</p>
+                    </div>
+                    <button class="btn btn-primary" id="btnAddSupplier"><i class="fa-solid fa-truck"></i> Tambah Vendor</button>
+                </div>
+                <div class="card table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>Perusahaan Vendor</th><th>Kontak PIC</th><th>Telepon</th><th>Komoditas</th><th>Aksi</th></tr></thead>
+                            <tbody id="suppliersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" id="pageReports">
+                <div class="page-header">
+                    <div>
+                        <h3>Jurnal Penjualan</h3>
+                        <p class="section-desc">Arsip transaksi ritel & Ekspor PDF Laporan.</p>
+                    </div>
+                    <button class="btn btn-danger" id="btnExportPDF"><i class="fa-solid fa-file-pdf"></i> Ekspor Laporan PDF</button>
+                </div>
+                <div class="card table-card">
+                    <div class="card-header">
+                        <div>Total Transaksi: <strong id="totalSales" class="text-blue">0</strong> Faktur</div>
+                        <span class="revenue-label">Akumulasi Pendapatan: <strong id="totalRevenue" class="text-emerald">Rp0</strong></span>
+                    </div>
+                    <div class="table-wrapper">
+                        <table>
+                            <thead><tr><th>No. INV</th><th>Waktu</th><th>Rincian Belanja</th><th>Metode</th><th>Operator Kasir</th><th>Total Bayar</th></tr></thead>
+                            <tbody id="salesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section class="page-section" id="pageSettings">
+                <div class="page-header">
+                    <div>
+                        <h3>Konfigurasi Sistem</h3>
+                        <p class="section-desc">Pembaruan parameter profil toko dan keamanan sandi.</p>
+                    </div>
+                </div>
+                <div class="grid-two-columns">
+                    <div class="card">
+                        <h4>Profil Bisnis Utama</h4>
+                        <div class="form-group"><label>Nama Perusahaan</label><input type="text" id="storeName"></div>
+                        <div class="form-group"><label>Alamat Operasional</label><input type="text" id="storeAddress"></div>
+                        <div class="form-group"><label>Tarif Pajak PPN (%)</label><input type="number" id="taxRate" min="0" max="100"></div>
+                        <button class="btn btn-primary" id="btnSaveSettings">Simpan Konfigurasi</button>
+                    </div>
+                    <div class="card">
+                        <h4>Otorisasi & Keamanan</h4>
+                        <div class="form-group"><label>Sandi Admin Baru</label><input type="password" id="newAdminPass" placeholder="Min. 4 karakter alphanumeric"></div>
+                        <button class="btn btn-danger" id="btnChangePassword">Perbarui Kunci Akses</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="flowerModal">
+        <div class="modal-dialog">
+            <button class="modal-close">&times;</button>
+            <h4 id="flowerModalTitle">Parameter Komoditas</h4>
+            <input type="hidden" id="flowerEditId">
+            <div class="form-group"><label>Nama Varietas Bunga</label><input type="text" id="flowerName"></div>
+            <div class="form-group"><label>Harga Beli Modal (HPP)</label><input type="number" id="flowerCost" min="0"></div>
+            <div class="form-group"><label>Harga Jual Eceran</label><input type="number" id="flowerPrice" min="0"></div>
+            <div class="form-group"><label>Jumlah Stok Logistik</label><input type="number" id="flowerStock" min="0"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-primary" id="btnSaveFlower">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="customerModal">
+        <div class="modal-dialog">
+            <button class="modal-close">&times;</button>
+            <h4 id="customerModalTitle">Profil Pelanggan</h4>
+            <input type="hidden" id="customerEditId">
+            <div class="form-group"><label>Nama Lengkap</label><input type="text" id="customerName"></div>
+            <div class="form-group"><label>Nomor Telepon/WA</label><input type="text" id="customerPhone"></div>
+            <div class="form-group"><label>Poin Loyalitas</label><input type="number" id="customerPoints" min="0"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-primary" id="btnSaveCustomer">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="supplierModal">
+        <div class="modal-dialog">
+            <button class="modal-close">&times;</button>
+            <h4 id="supplierModalTitle">Data Penyuplai</h4>
+            <input type="hidden" id="supplierEditId">
+            <div class="form-group"><label>Nama Perusahaan Vendor</label><input type="text" id="supplierCompany"></div>
+            <div class="form-group"><label>Narahubung (PIC)</label><input type="text" id="supplierContact"></div>
+            <div class="form-group"><label>Telepon Kontak</label><input type="text" id="supplierPhone"></div>
+            <div class="form-group"><label>Komoditas Disuplai</label><input type="text" id="supplierProduct"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-primary" id="btnSaveSupplier">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-dialog">
+            <button class="modal-close">&times;</button>
+            <h4>Penyelesaian Administrasi</h4>
+            <div class="total-box"><span>Total Tagihan Wajib Bayar</span><span id="paymentTotalDisplay" class="text-blue" style="font-size:1.2rem;">Rp0</span></div>
+            <div class="form-group">
+                <label>Pilih Metode Pembayaran</label>
+                <select id="paymentMethod">
+                    <option value="tunai">Tunai / Uang Cash</option>
+                    <option value="kredit">Kartu Kredit / Credit Card</option>
+                    <option value="debit">Kartu Debit / EDC</option>
+                    <option value="qris">E-Wallet / QRIS</option>
+                </select>
+            </div>
+            <div class="form-group" id="cashInputGroup"><label>Nominal Uang Tunai Diterima (Rp)</label><input type="number" id="cashReceived" min="0" placeholder="Masukkan jumlah uang..."></div>
+            <div id="changeDisplay" class="alert-box-status"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-success" id="btnProcessPayment">Konfirmasi & Cetak Faktur</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay receipt-modal" id="receiptModal">
+        <div class="modal-dialog">
+            <button class="modal-close">&times;</button>
+            <div class="receipt-content" id="receiptContent"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline btn-sm cancel-btn">Tutup</button>
+                <button class="btn btn-primary btn-sm" id="btnPrintReceipt"><i class="fa-solid fa-print"></i> Cetak Struk</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="holdCartModal">
+        <div class="modal-dialog" style="max-width: 600px;">
+            <button class="modal-close">&times;</button>
+            <h4>Daftar Antrean Belanja Tertahan (Hold)</h4>
+            <div class="table-wrapper" style="margin-top:15px;">
+                <table>
+                    <thead><tr><th>Waktu Penahanan</th><th>Rincian Item Keranjang</th><th>Aksi Eksekusi</th></tr></thead>
+                    <tbody id="holdCartTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="modal-dialog modal-delete">
+            <button class="modal-close">&times;</button>
+            <div class="danger-icon-avatar"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h4>Konfirmasi Penghapusan</h4>
+            <p>Tindakan ini tidak bisa dibatalkan. Yakin ingin menghapus data <strong id="deleteTargetName" class="text-red">-</strong> secara permanen?</p>
+            <input type="hidden" id="deleteTargetId">
+            <input type="hidden" id="deleteTargetType">
+            <div class="modal-actions justify-center">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-danger" id="btnConfirmDelete">Hapus Permanen</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
