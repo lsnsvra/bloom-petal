@@ -72,9 +72,9 @@
     let chartRevenueInstance = null;
     let chartProductInstance = null;
 
-    // --- STATE PAGINASI GUDANG (BARU) ---
+    // --- STATE PAGINASI GUDANG ---
     let inventoryCurrentPage = 1;
-    const inventoryItemsPerPage = 8; // Membatasi tabel gudang hanya 8 baris per halaman
+    const inventoryItemsPerPage = 8; 
 
     // ========== 4. CORE ENGINE & UI HELPERS ==========
     function showToast(message, type = 'success') {
@@ -134,7 +134,7 @@
         closeAllModals();
 
         if (page === 'dashboard') renderDashboardAnalytics();
-        else if (page === 'inventory') renderInventoryTable(); // Reset sorting and page when entering inventory? Actually it's fine as is.
+        else if (page === 'inventory') renderInventoryTable();
         else if (page === 'reports') renderReports();
         else if (page === 'crm') renderCRMTable();
         else if (page === 'suppliers') renderSuppliersTable();
@@ -197,19 +197,15 @@
         
         let html = '';
         
-        // Tombol Sebelumnya
         html += `<button class="page-btn" ${inventoryCurrentPage === 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} id="btnPrevInv"><i class="fa-solid fa-chevron-left"></i></button>`;
         
-        // Cetak Angka Halaman
         const pagesToShow = Math.max(1, totalPages);
         for (let i = 1; i <= pagesToShow; i++) {
             html += `<button class="page-btn ${inventoryCurrentPage === i ? 'active' : ''} page-num-btn-inv" data-page="${i}">Hal ${i}</button>`;
         }
         
-        // Tombol Selanjutnya
         html += `<button class="page-btn" ${(inventoryCurrentPage === totalPages || totalPages === 0) ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} id="btnNextInv"><i class="fa-solid fa-chevron-right"></i></button>`;
         
-        // Info Rekap
         html += `<span class="page-info">Total Gudang: ${totalItems} Varietas</span>`;
 
         container.innerHTML = html;
@@ -239,7 +235,6 @@
         const search = $('searchInventory').value.toLowerCase();
         let filtered = flowers.filter(f => f.name.toLowerCase().includes(search));
 
-        // Eksekusi Sorting Tabel (Asc/Desc)
         filtered.sort((a, b) => {
             let valA = a[sortColumn], valB = b[sortColumn];
             if (typeof valA === 'string') valA = valA.toLowerCase();
@@ -256,10 +251,8 @@
             return; 
         }
 
-        // --- Eksekusi Slice (Pemotongan) Paginasi Tabel ---
         const totalPages = Math.ceil(filtered.length / inventoryItemsPerPage);
         
-        // Cegah halaman melebih batas (misal habis menghapus barang)
         if (inventoryCurrentPage > totalPages && totalPages > 0) inventoryCurrentPage = totalPages;
         if (inventoryCurrentPage < 1) inventoryCurrentPage = 1;
         
@@ -267,7 +260,6 @@
         const endIdx = startIdx + inventoryItemsPerPage;
         const paginatedItems = filtered.slice(startIdx, endIdx);
 
-        // Render Baris Tabel
         tbody.innerHTML = paginatedItems.map(f => {
             let badge = f.stock <= 5 ? 'badge-low' : f.stock <= 15 ? 'badge-ok' : 'badge-good';
             let status = f.stock <= 5 ? 'Kritis' : f.stock <= 15 ? 'Terbatas' : 'Aman';
@@ -284,20 +276,17 @@
             </tr>`;
         }).join('');
 
-        // Tampilkan tombol navigasi halaman
         renderInventoryPagination(filtered.length, totalPages);
 
         document.querySelectorAll('.edit-flower').forEach(b => b.onclick = () => openFlowerModal(+b.dataset.id));
         document.querySelectorAll('.delete-btn').forEach(b => b.onclick = () => openDeleteConfirmModal(+b.dataset.id, b.dataset.type));
     }
 
-    // Reset ke halaman 1 saat pengguna mengetik di kolom pencarian
     $('searchInventory').oninput = function() {
         inventoryCurrentPage = 1; 
         renderInventoryTable();
     };
 
-    // Reset ke halaman 1 saat klik urutkan (sort) kolom
     document.querySelectorAll('table th[data-sort]').forEach(th => {
         th.onclick = function() {
             const col = this.dataset.sort;
@@ -324,9 +313,14 @@
                 $('flowerCost').value = f.cost; $('flowerPrice').value = f.price; $('flowerStock').value = f.stock;
                 $('flowerModalTitle').textContent = 'Ubah Detail Komoditas';
             }
-        } else $('flowerModalTitle').textContent = 'Pendaftaran Bunga Baru';
+        } else {
+            $('flowerModalTitle').textContent = 'Pendaftaran Bunga Baru';
+        }
         $('flowerModal').classList.add('show');
     }
+
+    // INI DIA PERBAIKANNYA (Klik Tambah Bunga)
+    $('btnAddFlower').onclick = () => openFlowerModal();
 
     $('btnSaveFlower').onclick = function() {
         const flowers = getDB('bloom_flowers', DEFAULT_FLOWERS);
@@ -359,7 +353,6 @@
         select.innerHTML = '<option value="">-- Pelanggan Umum (Tanpa Poin) --</option>' + customers.map(c => `<option value="${c.id}">${escapeHTML(c.name)} [Poin: ${c.points}]</option>`).join('');
     }
 
-    // Fungsi Render Grid Barang Kasir (Full Scroll)
     function renderProductGrid() {
         const flowers = getDB('bloom_flowers', DEFAULT_FLOWERS);
         const search = $('searchProduct').value.toLowerCase();
@@ -372,7 +365,6 @@
             return; 
         }
 
-        // Cetak seluruh barang langsung (scroll)
         grid.innerHTML = filtered.map(f => `
             <div class="product-card ${f.stock <= 0 ? 'out-of-stock' : ''}" data-id="${f.id}">
                 <div class="p-name">${escapeHTML(f.name)}</div>
@@ -381,7 +373,6 @@
             </div>
         `).join('');
 
-        // Aksi klik masuk ke Keranjang Belanja
         document.querySelectorAll('.product-card:not(.out-of-stock)').forEach(card => {
             card.onclick = () => {
                 const id = +card.dataset.id;
@@ -526,7 +517,6 @@
         const method = $('paymentMethod').value;
         const customerId = $('cartCustomerSelect').value;
 
-        // Validasi uang cash
         if (method === 'tunai' && (parseInt($('cashReceived').value) || 0) < total) {
             return showToast('Transaksi Dibatalkan: Uang tunai yang dibayar kurang dari nilai tagihan.', 'danger');
         }
