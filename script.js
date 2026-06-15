@@ -53,7 +53,6 @@
     const saveSettings = (data) => saveDB('bloom_settings', data);
     const $ = id => document.getElementById(id);
 
-    // MIGRATION SCRIPT 
     let existingFlowers = getDB('bloom_flowers', DEFAULT_FLOWERS);
     let needsUpdate = false;
     existingFlowers = existingFlowers.map(f => {
@@ -72,12 +71,17 @@
     let chartRevenueInstance = null;
     let chartProductInstance = null;
 
-    // --- STATE PAGINASI GUDANG ---
     let inventoryCurrentPage = 1;
     const inventoryItemsPerPage = 8; 
 
-    // ========== 4. CORE ENGINE & UI HELPERS ==========
+    // ========== 4. CORE ENGINE, VALIDASI & UI HELPERS ==========
+    // Flag untuk menghindari double toast (Penyelesaian High Priority)
+    let isToastProcessing = false;
+
     function showToast(message, type = 'success') {
+        if (isToastProcessing) return; // Mencegah redundansi
+        isToastProcessing = true;
+        
         const container = $('toastContainer');
         if (!container) return;
         const toast = document.createElement('div');
@@ -87,7 +91,17 @@
         if (type === 'warning') icon = '<i class="fa-solid fa-circle-exclamation text-gold"></i>';
         toast.innerHTML = `${icon} <span>${message}</span>`;
         container.appendChild(toast);
+        
+        // Buka gembok spam setelah 1 detik
+        setTimeout(() => { isToastProcessing = false; }, 800);
+        // Hapus notifikasi
         setTimeout(() => toast.remove(), 3500);
+    }
+
+    // Fungsi Validasi Telepon Regex (Penyelesaian Critical Priority)
+    function validatePhoneNumber(phone) {
+        const phoneRegex = /^[0-9+\-\s()]+$/;
+        return phoneRegex.test(phone);
     }
 
     function showLoading() { $('loadingOverlay').classList.add('show'); }
@@ -194,39 +208,20 @@
     function renderInventoryPagination(totalItems, totalPages) {
         const container = $('inventoryPagination');
         if (!container) return;
-        
         let html = '';
-        
         html += `<button class="page-btn" ${inventoryCurrentPage === 1 ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} id="btnPrevInv"><i class="fa-solid fa-chevron-left"></i></button>`;
-        
         const pagesToShow = Math.max(1, totalPages);
         for (let i = 1; i <= pagesToShow; i++) {
             html += `<button class="page-btn ${inventoryCurrentPage === i ? 'active' : ''} page-num-btn-inv" data-page="${i}">Hal ${i}</button>`;
         }
-        
         html += `<button class="page-btn" ${(inventoryCurrentPage === totalPages || totalPages === 0) ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''} id="btnNextInv"><i class="fa-solid fa-chevron-right"></i></button>`;
-        
         html += `<span class="page-info">Total Gudang: ${totalItems} Varietas</span>`;
-
         container.innerHTML = html;
 
-        if($('btnPrevInv')) {
-            $('btnPrevInv').onclick = () => {
-                if (inventoryCurrentPage > 1) { inventoryCurrentPage--; renderInventoryTable(); }
-            };
-        }
-        
-        if($('btnNextInv')) {
-            $('btnNextInv').onclick = () => {
-                if (inventoryCurrentPage < totalPages) { inventoryCurrentPage++; renderInventoryTable(); }
-            };
-        }
-
+        if($('btnPrevInv')) $('btnPrevInv').onclick = () => { if (inventoryCurrentPage > 1) { inventoryCurrentPage--; renderInventoryTable(); } };
+        if($('btnNextInv')) $('btnNextInv').onclick = () => { if (inventoryCurrentPage < totalPages) { inventoryCurrentPage++; renderInventoryTable(); } };
         document.querySelectorAll('.page-num-btn-inv').forEach(btn => {
-            btn.onclick = function() {
-                inventoryCurrentPage = parseInt(this.dataset.page);
-                renderInventoryTable();
-            };
+            btn.onclick = function() { inventoryCurrentPage = parseInt(this.dataset.page); renderInventoryTable(); };
         });
     }
 
@@ -247,12 +242,10 @@
 
         if (!filtered.length) { 
             tbody.innerHTML = '<tr><td colspan="6" class="empty-table">Data logistik bunga tidak ditemukan.</td></tr>'; 
-            renderInventoryPagination(0, 0);
-            return; 
+            renderInventoryPagination(0, 0); return; 
         }
 
         const totalPages = Math.ceil(filtered.length / inventoryItemsPerPage);
-        
         if (inventoryCurrentPage > totalPages && totalPages > 0) inventoryCurrentPage = totalPages;
         if (inventoryCurrentPage < 1) inventoryCurrentPage = 1;
         
@@ -282,24 +275,13 @@
         document.querySelectorAll('.delete-btn').forEach(b => b.onclick = () => openDeleteConfirmModal(+b.dataset.id, b.dataset.type));
     }
 
-    $('searchInventory').oninput = function() {
-        inventoryCurrentPage = 1; 
-        renderInventoryTable();
-    };
-
+    $('searchInventory').oninput = function() { inventoryCurrentPage = 1; renderInventoryTable(); };
     document.querySelectorAll('table th[data-sort]').forEach(th => {
         th.onclick = function() {
             const col = this.dataset.sort;
-            if (sortColumn === col) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else { 
-                sortColumn = col; 
-                sortDirection = 'asc'; 
-            }
-            if (currentPage === 'inventory') {
-                inventoryCurrentPage = 1;
-                renderInventoryTable();
-            }
+            if (sortColumn === col) sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            else { sortColumn = col; sortDirection = 'asc'; }
+            if (currentPage === 'inventory') { inventoryCurrentPage = 1; renderInventoryTable(); }
         };
     });
 
@@ -313,15 +295,11 @@
                 $('flowerCost').value = f.cost; $('flowerPrice').value = f.price; $('flowerStock').value = f.stock;
                 $('flowerModalTitle').textContent = 'Ubah Detail Komoditas';
             }
-        } else {
-            $('flowerModalTitle').textContent = 'Pendaftaran Bunga Baru';
-        }
+        } else $('flowerModalTitle').textContent = 'Pendaftaran Bunga Baru';
         $('flowerModal').classList.add('show');
     }
 
-    // INI DIA PERBAIKANNYA (Klik Tambah Bunga)
     $('btnAddFlower').onclick = () => openFlowerModal();
-
     $('btnSaveFlower').onclick = function() {
         const flowers = getDB('bloom_flowers', DEFAULT_FLOWERS);
         const editId = $('flowerEditId').value;
@@ -334,10 +312,10 @@
 
         if (editId) {
             const idx = flowers.findIndex(f => f.id === +editId);
-            if (idx !== -1) { Object.assign(flowers[idx], { name, cost, price, stock }); showToast('Informasi varietas berhasil diperbarui.'); }
+            if (idx !== -1) { Object.assign(flowers[idx], { name, cost, price, stock }); showToast('Informasi varietas berhasil diperbarui.', 'success'); }
         } else {
             flowers.push({ id: Math.max(0, ...flowers.map(f => f.id)) + 1, name, cost, price, stock });
-            showToast('Satu varietas bunga baru berhasil diregistrasi.');
+            showToast('Satu varietas bunga baru berhasil diregistrasi.', 'success');
         }
         
         saveDB('bloom_flowers', flowers);
@@ -345,7 +323,7 @@
         renderInventoryTable();
     };
 
-    // ========== 8. SISTEM POINT OF SALE (POS KASIR TANPA PAGINASI) ==========
+    // ========== 8. SISTEM POINT OF SALE (POS KASIR FULL SCROLL) ==========
     function populateCashierCustomers() {
         const customers = getDB('bloom_crm', DEFAULT_CUSTOMERS);
         const select = $('cartCustomerSelect');
@@ -379,15 +357,10 @@
                 const fl = flowers.find(f => f.id === id);
                 const existing = cart.find(i => i.flowerId === id);
                 
-                if (existing && existing.qty >= fl.stock) {
-                    return showToast(`Maksimal! Sisa stok ${fl.name} hanya ${fl.stock}.`, 'warning');
-                }
+                if (existing && existing.qty >= fl.stock) return showToast(`Maksimal! Sisa stok ${fl.name} hanya ${fl.stock}.`, 'warning');
                 
-                if (existing) {
-                    existing.qty++;
-                } else {
-                    cart.push({ flowerId: fl.id, name: fl.name, price: fl.price, qty: 1 });
-                }
+                if (existing) existing.qty++;
+                else cart.push({ flowerId: fl.id, name: fl.name, price: fl.price, qty: 1 });
                 updateCartDisplay();
             };
         });
@@ -421,12 +394,8 @@
             const qty = parseInt(this.value) || 1;
             const fl = getDB('bloom_flowers', []).find(f => f.id === cart[idx].flowerId);
             
-            if (qty > fl.stock) { 
-                showToast(`Limit stok tersisa hanya ${fl.stock} unit.`, 'warning'); 
-                cart[idx].qty = fl.stock; 
-            } else {
-                cart[idx].qty = Math.max(1, qty);
-            }
+            if (qty > fl.stock) { showToast(`Limit stok tersisa hanya ${fl.stock} unit.`, 'warning'); cart[idx].qty = fl.stock; } 
+            else { cart[idx].qty = Math.max(1, qty); }
             updateCartDisplay();
         });
 
@@ -450,7 +419,7 @@
     $('discountPercent').oninput = updateCartDisplay;
     $('btnClearCart').onclick = () => { cart = []; updateCartDisplay(); showToast('Keranjang telah dikosongkan.', 'warning'); };
 
-    // --- FITUR HOLD / ANTREAN KARTU KASIR ---
+    // --- HOLD CART FEATURE ---
     $('btnHoldCart').onclick = function() {
         if (!cart.length) return showToast('Gagal menahan: Keranjang Anda saat ini kosong.', 'warning');
         heldCarts.push({ id: Date.now(), timestamp: new Date().toLocaleTimeString('id-ID'), items: [...cart] });
@@ -478,8 +447,7 @@
             cart = heldCarts[idx].items;
             heldCarts.splice(idx, 1);
             $('holdCount').textContent = heldCarts.length;
-            closeAllModals(); 
-            updateCartDisplay();
+            closeAllModals(); updateCartDisplay();
             showToast('Antrean berhasil ditarik masuk ke keranjang kasir.');
         });
 
@@ -493,7 +461,7 @@
         $('holdCartModal').classList.add('show');
     };
 
-    // --- PROSES PEMBAYARAN FINAL ---
+    // --- PEMBAYARAN & STRUK CETAK ---
     $('btnPay').onclick = function() {
         const total = parseInt($('cartTotal').textContent.replace(/[^\d]/g, '')) || 0;
         $('paymentTotalDisplay').textContent = 'Rp ' + total.toLocaleString('id-ID');
@@ -551,6 +519,13 @@
         const change = received - total;
         const settings = getSettings();
 
+        // Teks Keterangan Metode Pembayaran (Penyelesaian Temuan Critical)
+        let methodDesc = '';
+        if (method === 'qris') methodDesc = 'QRIS E-Wallet Dinamis';
+        else if (method === 'debit') methodDesc = 'Kartu Debit (EDC/Transfer)';
+        else if (method === 'kredit') methodDesc = 'Kartu Kredit (EDC)';
+        else methodDesc = 'Uang Tunai (Cash)';
+
         $('receiptContent').innerHTML = `
             <div class="rc-store">${settings.storeName}</div>
             <div style="text-align:center; font-size:10px;">${settings.storeAddress}</div>
@@ -570,9 +545,9 @@
             <div style="display:flex;justify-content:space-between;"><span>Pajak PPN (${taxRate}%)</span><span>Rp ${tax.toLocaleString('id-ID')}</span></div>
             <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;margin-top:6px;"><span>GRAND TOTAL</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
             <div class="rc-line"></div>
-            <div style="display:flex;justify-content:space-between;"><span>Kanal Bayar</span><span>${method.toUpperCase()}</span></div>
-            <div style="display:flex;justify-content:space-between;"><span>Uang Diserahkan</span><span>Rp ${received.toLocaleString('id-ID')}</span></div>
-            <div style="display:flex;justify-content:space-between;font-weight:700;"><span>KEMBALIAN TUNAI</span><span>Rp ${change.toLocaleString('id-ID')}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Kanal Bayar</span><span>${methodDesc}</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Nominal Diserahkan</span><span>Rp ${received.toLocaleString('id-ID')}</span></div>
+            <div style="display:flex;justify-content:space-between;font-weight:700;"><span>KEMBALIAN</span><span>Rp ${change.toLocaleString('id-ID')}</span></div>
             <div class="rc-line"></div>
             <div style="text-align:center;font-weight:bold;font-size:11px;">TERIMA KASIH ATAS KUNJUNGAN ANDA</div>
             <div style="text-align:center;font-size:10px;margin-top:4px;">Struk elektronik adalah dokumen sah.</div>`;
@@ -580,18 +555,14 @@
         $('paymentModal').classList.remove('show');
         $('receiptModal').classList.add('show');
         
-        cart = []; 
-        updateCartDisplay(); 
-        $('discountPercent').value = 0; 
-        renderProductGrid();
+        cart = []; updateCartDisplay(); $('discountPercent').value = 0; renderProductGrid();
     };
 
     $('btnPrintReceipt').onclick = function() {
         const content = $('receiptContent').innerHTML;
         const win = window.open('', '', 'width=420,height=650');
         win.document.write(`<html><head><title>Struk POS</title><style>body{font-family:'Courier New',monospace;font-size:12px;padding:10px;color:#000;} .rc-store{font-weight:bold;text-align:center;font-size:16px;} table{width:100%;font-size:12px;margin:8px 0;} .rc-line{border-top:1px dashed #000;margin:8px 0;}</style></head><body>${content}</body></html>`);
-        win.document.close(); 
-        win.focus();
+        win.document.close(); win.focus();
         setTimeout(() => { win.print(); win.close(); }, 500); 
     };
 
@@ -635,11 +606,15 @@
         const phone = $('customerPhone').value.trim();
         const points = parseInt($('customerPoints').value) || 0;
 
-        if (!name || !phone) return showToast('Penolakan: Pastikan nama dan telepon pelanggan sudah diisi.', 'danger');
+        if (!name || !phone) return showToast('Penolakan: Nama dan Telepon wajib diisi.', 'danger');
+        
+        // Proteksi Regex Telepon CRM
+        if (!validatePhoneNumber(phone)) return showToast('Validasi Gagal: Kolom telepon hanya boleh berisi format angka.', 'danger');
+
         if (editId) { const c = customers.find(x => x.id === +editId); if (c) Object.assign(c, { name, phone, points }); } 
         else { customers.push({ id: Date.now(), name, phone, points }); }
 
-        saveDB('bloom_crm', customers); showToast('Pangkalan data CRM sukses diperbarui.');
+        saveDB('bloom_crm', customers); showToast('Pangkalan data CRM berhasil diperbarui.', 'success');
         $('customerModal').classList.remove('show'); renderCRMTable();
     };
 
@@ -680,11 +655,15 @@
         const phone = $('supplierPhone').value.trim();
         const product = $('supplierProduct').value.trim();
 
-        if (!company || !contact) return showToast('Sistem Menolak: Identitas perusahaan dan kontak narahubung wajib diisi.', 'danger');
+        if (!company || !contact || !phone) return showToast('Sistem Menolak: Identitas perusahaan, PIC dan kontak wajib diisi.', 'danger');
+        
+        // Proteksi Regex Telepon Supplier
+        if (!validatePhoneNumber(phone)) return showToast('Validasi Gagal: Kolom telepon hanya boleh berisi format angka.', 'danger');
+
         if (editId) { const s = suppliers.find(x => x.id === +editId); if (s) Object.assign(s, { company, contact, phone, product }); } 
         else { suppliers.push({ id: Date.now(), company, contact, phone, product }); }
 
-        saveDB('bloom_suppliers', suppliers); showToast('Kontrak kemitraan vendor berhasil diikat.');
+        saveDB('bloom_suppliers', suppliers); showToast('Kontrak kemitraan vendor berhasil diikat.', 'success');
         $('supplierModal').classList.remove('show'); renderSuppliersTable();
     };
 
@@ -715,24 +694,16 @@
         const doc = new jsPDF('p', 'mm', 'a4');
         const settings = getSettings();
 
-        doc.setFont('helvetica', 'bold'); 
-        doc.setFontSize(18); 
-        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(15, 23, 42);
         doc.text(settings.storeName.toUpperCase(), 14, 20);
         
-        doc.setFont('helvetica', 'normal'); 
-        doc.setFontSize(10); 
-        doc.setTextColor(100, 116, 139);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(100, 116, 139);
         doc.text(settings.storeAddress, 14, 26);
         doc.text(`Waktu Sinkronisasi Dokumen: ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}`, 14, 32);
         
-        doc.setDrawColor(200); 
-        doc.setLineWidth(0.5);
-        doc.line(14, 36, 196, 36);
+        doc.setDrawColor(200); doc.setLineWidth(0.5); doc.line(14, 36, 196, 36);
 
-        doc.setFont('helvetica', 'bold'); 
-        doc.setFontSize(13); 
-        doc.setTextColor(15, 23, 42);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(15, 23, 42);
         doc.text('DOKUMEN LEGAL JURNAL TRANSAKSI PENJUALAN KASIR', 14, 46);
         
         const tableColumn = ["ID Faktur", "Waktu Transaksi", "Rincian Checkout (Qty)", "Pembayaran", "Operator", "Nominal Tagihan"];
@@ -742,39 +713,23 @@
         sales.forEach(s => {
             const rincianItems = s.items.map(i => `- ${i.name} (x${i.qty})`).join('\n');
             const rowData = [
-                `#INV-${String(s.id).padStart(4,'0')}`,
-                s.date,
-                rincianItems,
-                s.paymentMethod,
-                s.cashierName,
-                `Rp ${s.total.toLocaleString('id-ID')}`
+                `#INV-${String(s.id).padStart(4,'0')}`, s.date, rincianItems, s.paymentMethod, s.cashierName, `Rp ${s.total.toLocaleString('id-ID')}`
             ];
             tableRows.push(rowData);
             grandTotalKeseluruhan += s.total;
         });
 
         doc.autoTable({
-            startY: 52,
-            head: [tableColumn],
-            body: tableRows,
-            theme: 'striped',
+            startY: 52, head: [tableColumn], body: tableRows, theme: 'striped',
             headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
             bodyStyles: { textColor: [30, 41, 59], valign: 'middle' },
-            columnStyles: {
-                0: { fontStyle: 'bold', textColor: [59, 130, 246] },
-                2: { cellWidth: 55 },
-                5: { halign: 'right', fontStyle: 'bold' }
-            },
-            styles: { fontSize: 9, cellPadding: 4 },
-            alternateRowStyles: { fillColor: [248, 250, 252] }
+            columnStyles: { 0: { fontStyle: 'bold', textColor: [59, 130, 246] }, 2: { cellWidth: 55 }, 5: { halign: 'right', fontStyle: 'bold' } },
+            styles: { fontSize: 9, cellPadding: 4 }, alternateRowStyles: { fillColor: [248, 250, 252] }
         });
 
         const finalY = doc.lastAutoTable.finalY || 52;
-        doc.setFillColor(241, 245, 249);
-        doc.rect(14, finalY + 6, 182, 14, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(11);
+        doc.setFillColor(241, 245, 249); doc.rect(14, finalY + 6, 182, 14, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42); doc.setFontSize(11);
         doc.text('TOTAL PENDAPATAN KESELURUHAN (BRUTO):', 20, finalY + 15);
         doc.text(`Rp ${grandTotalKeseluruhan.toLocaleString('id-ID')}`, 190, finalY + 15, { align: 'right' });
 
@@ -787,14 +742,22 @@
         const s = getSettings();
         $('storeName').value = s.storeName; $('storeAddress').value = s.storeAddress; $('taxRate').value = s.taxRate; $('newAdminPass').value = '';
     }
+    
     $('btnSaveSettings').onclick = function() {
-        const s = getSettings(); s.storeName = $('storeName').value.trim(); s.storeAddress = $('storeAddress').value.trim(); s.taxRate = parseFloat($('taxRate').value) || 0;
-        saveSettings(s); showToast('Perubahan parameter profil konfigurasi bisnis diamankan.');
+        const s = getSettings(); 
+        s.storeName = $('storeName').value.trim(); 
+        s.storeAddress = $('storeAddress').value.trim(); 
+        s.taxRate = parseFloat($('taxRate').value) || 0;
+        saveSettings(s); 
+        showToast('Perubahan parameter profil konfigurasi bisnis diamankan.', 'success');
     };
+
     $('btnChangePassword').onclick = function() {
-        const pass = $('newAdminPass').value.trim(); if (pass.length < 4) return showToast('Lemah. Sandi harus terdiri dari minimal 4 karakter kombinasi.', 'danger');
+        const pass = $('newAdminPass').value.trim(); 
+        if (pass.length < 4) return showToast('Lemah. Sandi harus terdiri dari minimal 4 karakter kombinasi.', 'danger');
         const s = getSettings(); s.adminPassword = pass; saveSettings(s);
-        showToast('Kunci gerbang otorisasi administrator berhasil ditimpa.'); $('newAdminPass').value = '';
+        showToast('Kunci gerbang otorisasi administrator berhasil ditimpa.', 'success'); 
+        $('newAdminPass').value = '';
     };
 
     function openDeleteConfirmModal(id, type) {
@@ -809,7 +772,7 @@
         if (type === 'crm') saveDB('bloom_crm', getDB('bloom_crm', DEFAULT_CUSTOMERS).filter(x => x.id !== id));
         if (type === 'supplier') saveDB('bloom_suppliers', getDB('bloom_suppliers', DEFAULT_SUPPLIERS).filter(x => x.id !== id));
         
-        showToast(`Indeks data ${type} berhasil dimusnahkan secara permanen dari server lokal.`, 'warning');
+        showToast(`Indeks data ${type} berhasil dimusnahkan secara permanen dari server lokal.`, 'success');
         $('deleteConfirmModal').classList.remove('show');
         
         if (type === 'flower') renderInventoryTable();
@@ -817,7 +780,7 @@
         if (type === 'supplier') renderSuppliersTable();
     };
 
-    // ========== 12. OTENTIKASI & TRIGGER INIT ==========
+    // ========== 12. OTENTIKASI & LOGOUT (Penambahan Dialog Konfirmasi) ==========
     function handleLogin() {
         const user = $('loginUsername').value.trim().toLowerCase();
         const pass = $('loginPassword').value.trim();
@@ -844,20 +807,26 @@
         }, 500);
     }
 
-    $('btnLogout').onclick = function() {
+    // Trigger Buka Modal Konfirmasi Logout
+    $('btnInitiateLogout').onclick = function() {
+        $('logoutConfirmModal').classList.add('show');
+    };
+
+    // Eksekusi Hancurkan Sesi Saat Dikonfirmasi
+    $('btnConfirmLogout').onclick = function() {
+        $('logoutConfirmModal').classList.remove('show');
         currentUser = null; cart = []; heldCarts = [];
         $('mainContainer').classList.remove('active');
         $('loginPage').style.display = 'flex';
         $('loginUsername').value = ''; $('loginPassword').value = '';
         closeAllModals();
-        showToast('Sesi kerja Anda telah diakhiri.', 'success');
+        showToast('Sesi kerja Anda telah diakhiri secara aman.', 'success');
     };
 
     $('btnLogin').onclick = handleLogin;
     $('loginPassword').onkeydown = e => { if (e.key === 'Enter') handleLogin(); };
     $('paymentMethod').onchange = function() { $('cashInputGroup').style.display = this.value === 'tunai' ? 'block' : 'none'; };
     
-    // Auto-Hitung Live Bayar Kembalian Kasir
     $('cashReceived').oninput = function() {
         const total = parseInt($('paymentTotalDisplay').textContent.replace(/[^\d]/g, '')) || 0;
         const received = parseInt(this.value) || 0;
@@ -874,7 +843,6 @@
         }
     };
 
-    // Global Key Events & Modal Escapes
     document.querySelectorAll('.modal-overlay').forEach(ov => ov.onclick = function(e) { if (e.target === this) this.classList.remove('show'); });
     document.querySelectorAll('.modal-close, .cancel-btn').forEach(b => b.onclick = () => closeAllModals());
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAllModals(); });
