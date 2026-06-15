@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bloom & Petal Ultimate — Sistem ERP Toko Bunga</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,7 +63,7 @@
                     <i class="fa-solid fa-shield-user text-blue"></i>
                     <span id="sidebarUserLabel">Operator</span>
                 </div>
-                <button class="logout-btn" id="btnLogout"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+                <button class="logout-btn" id="btnInitiateLogout"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
             </div>
         </aside>
 
@@ -138,9 +138,7 @@
                             <tbody id="inventoryTableBody"></tbody>
                         </table>
                     </div>
-                    
                     <div class="pagination-container" id="inventoryPagination" style="margin-top: 15px; margin-bottom: 20px;"></div>
-                    
                 </div>
             </section>
 
@@ -161,7 +159,6 @@
                             <i class="fa-solid fa-magnifying-glass search-icon"></i>
                             <input type="text" class="search-input" id="searchProduct" placeholder="Cari barang di etalase...">
                         </div>
-                        
                         <div class="product-grid" id="productGrid"></div>
                     </div>
 
@@ -295,7 +292,7 @@
             <h4 id="customerModalTitle">Profil Pelanggan</h4>
             <input type="hidden" id="customerEditId">
             <div class="form-group"><label>Nama Lengkap</label><input type="text" id="customerName"></div>
-            <div class="form-group"><label>Nomor Telepon/WA</label><input type="text" id="customerPhone"></div>
+            <div class="form-group"><label>Nomor Telepon/WA (Hanya Angka)</label><input type="tel" id="customerPhone" placeholder="Contoh: 08123456789"></div>
             <div class="form-group"><label>Poin Loyalitas</label><input type="number" id="customerPoints" min="0"></div>
             <div class="modal-actions">
                 <button class="btn btn-outline cancel-btn">Batal</button>
@@ -311,7 +308,7 @@
             <input type="hidden" id="supplierEditId">
             <div class="form-group"><label>Nama Perusahaan Vendor</label><input type="text" id="supplierCompany"></div>
             <div class="form-group"><label>Narahubung (PIC)</label><input type="text" id="supplierContact"></div>
-            <div class="form-group"><label>Telepon Kontak</label><input type="text" id="supplierPhone"></div>
+            <div class="form-group"><label>Telepon Kontak (Hanya Angka)</label><input type="tel" id="supplierPhone" placeholder="Contoh: 08123456789"></div>
             <div class="form-group"><label>Komoditas Disuplai</label><input type="text" id="supplierProduct"></div>
             <div class="modal-actions">
                 <button class="btn btn-outline cancel-btn">Batal</button>
@@ -378,6 +375,19 @@
             <div class="modal-actions justify-center">
                 <button class="btn btn-outline cancel-btn">Batal</button>
                 <button class="btn btn-danger" id="btnConfirmDelete">Hapus Permanen</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="logoutConfirmModal">
+        <div class="modal-dialog modal-delete">
+            <button class="modal-close">&times;</button>
+            <div class="danger-icon-avatar" style="color: var(--gold-amber); background: var(--gold-light);"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <h4>Konfirmasi Keluar</h4>
+            <p>Apakah Anda yakin ingin mengakhiri sesi kerja operasional ini?</p>
+            <div class="modal-actions justify-center">
+                <button class="btn btn-outline cancel-btn">Batal</button>
+                <button class="btn btn-danger" id="btnConfirmLogout">Keluar Sistem</button>
             </div>
         </div>
     </div>
